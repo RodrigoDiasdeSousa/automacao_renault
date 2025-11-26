@@ -20,15 +20,10 @@ class AutomacaoEmailOutlook:
         self.aba_destinatarios = aba_destinatarios 
         self.outlook = win32com.client.Dispatch('outlook.application')
         
-        # --- ATUALIZE AQUI O NOME DO ARQUIVO DA IMAGEM DA SUA ASSINATURA ---
-        # (Esta imagem deve estar na mesma pasta do script)
-        self.arquivo_imagem_assinatura = "logo_assinatura.png" # <--- MUDE AQUI
-        # ------------------------------------------------------------------
+      
+        self.arquivo_imagem_assinatura = "logo_assinatura.png" 
 
     def _gerar_html_assinatura(self, cid_imagem_assinatura):
-        """
-        Gera o HTML da assinatura personalizada com negrito seletivo.
-        """
         
         texto_assinatura_html = f"""
         <div style="font-family: Aptos, Arial, sans-serif; font-size: 12pt; font-weight: normal;">
@@ -82,7 +77,7 @@ class AutomacaoEmailOutlook:
             return None
             
         if 'Grupo' in df.columns:
-            # Limpa "Grupo R Point" para ficar apenas "R Point"
+            
             df['Grupo'] = df['Grupo'].astype(str).str.replace("Grupo ", "").str.strip()
         else:
             print(f"✗ ERRO: Coluna 'Grupo' não encontrada no arquivo de destinatários.")
@@ -97,7 +92,6 @@ class AutomacaoEmailOutlook:
                                 coluna_inicio, coluna_fim, caminho_saida):
         """Tira screenshot de uma tabela específica no Excel"""
         
-        # Define as variáveis ANTES do try para que o 'finally' possa acessá-las
         excel = None
         wb = None
         
@@ -128,19 +122,18 @@ class AutomacaoEmailOutlook:
             print(f"  ✗ Erro ao tirar screenshot: {e}")
             return None
         finally:
-            # Garante que o processo do Excel seja finalizado
+            
             if wb:
                 wb.Close(SaveChanges=False)
-                del wb  # Força a liberação do objeto
+                del wb  
                 
             if excel:
                 excel.Quit()
-                del excel # Força a liberação do objeto
+                del excel 
     
     def gerar_mensagem_alerta(self, nome_grupo, lista_desenquadradas, cid_imagem):
         """Gera a mensagem de ALERTA do email com o novo template e fonte"""
         
-        # --- Lógica para formatar a lista de concessionárias ---
         nomes_formatados_html = [f'<strong class="alerta">{nome}</strong>' for nome in lista_desenquadradas]
         
         texto_principal = ""
@@ -151,10 +144,9 @@ class AutomacaoEmailOutlook:
             str_nomes = f"{nomes_formatados_html[0]} e {nomes_formatados_html[1]}"
             texto_principal = f"As concessionárias {str_nomes} estão desenquadradas."
         elif len(nomes_formatados_html) > 2:
-            # Junta todos, exceto o último, com vírgula. Adiciona o último com "e".
+        
             str_nomes = f"{', '.join(nomes_formatados_html[:-1])}, e {nomes_formatados_html[-1]}"
             texto_principal = f"As concessionárias {str_nomes} estão desenquadradas."
-        # --- Fim da lógica de formatação ---
 
         mensagem = f"""
         <html>
@@ -265,7 +257,6 @@ class AutomacaoEmailOutlook:
             
             email.Subject = assunto
 
-            # --- 1. GERAR E ANEXAR ASSINATURA ---
             cid_imagem_assinatura = "img_assinatura_personalizada"
             assinatura_html = self._gerar_html_assinatura(cid_imagem_assinatura)
             
@@ -277,17 +268,17 @@ class AutomacaoEmailOutlook:
             else:
                 print(f"  ⚠ AVISO: Imagem da assinatura '{self.arquivo_imagem_assinatura}' não encontrada.")
             
-            # --- 2. ANEXAR O SCREENSHOT (Lógica existente) ---
+        
             if anexo_inline_path and anexo_cid and os.path.exists(anexo_inline_path):
                 attachment_ss = email.Attachments.Add(os.path.abspath(anexo_inline_path))
                 PR_ATTACH_CONTENT_ID = "http://schemas.microsoft.com/mapi/proptag/0x3712001F"
                 attachment_ss.PropertyAccessor.SetProperty(PR_ATTACH_CONTENT_ID, anexo_cid)
 
-            # --- 3. COMBINA MENSAGEM + ASSINATURA ---
+          
             email.HTMLBody = corpo_html + assinatura_html
 
-            # --- MODO DE TESTE ---
-            email.Display() # Abre o email na tela para revisão
+           
+            email.Display() 
             
             print(f"  ✓ Email EXIBIDO PARA TESTE") 
             print(f"    Para: {destinatarios_para}")
@@ -304,7 +295,7 @@ class AutomacaoEmailOutlook:
         Lê a linha_datas, encontra todas as datas, e retorna o 
         índice da coluna mais recente e da segunda mais recente.
         """
-        datas_encontradas = [] # (datetime_obj, col_index)
+        datas_encontradas = [] 
         
         for c in range(3, max_col + 1): 
             cell_val = ws.cell(linha_datas, c).value
@@ -326,12 +317,11 @@ class AutomacaoEmailOutlook:
             
         return col_recente, col_anterior
 
-    # --- NOVO MÉTODO (MOVIDO PARA DENTRO DA CLASSE) ---
+  
     def _identificar_subgrupos_regence_roma(self, nome_grupo, concessionarias_desenquadradas):
         """
         Separa as concessionárias desenquadradas de REGENCE e ROMA
         em subgrupos mapeados explicitamente para envio de emails.
-        (Versão corrigida, sem o prefixo "Grupo ")
         """
         subgrupos = {}
 
@@ -341,12 +331,12 @@ class AutomacaoEmailOutlook:
             regence_fortaleza = [c for c in concessionarias_desenquadradas if "FORTALEZA" in c.upper()]
             regence_veiculos = [c for c in concessionarias_desenquadradas if c not in regence_fortaleza]
 
-            # --- CORREÇÃO AQUI ---
+         
             if regence_fortaleza:
                 subgrupos["Regence Veículos Fortaleza"] = regence_fortaleza
             if regence_veiculos:
                 subgrupos["Regence Veículos"] = regence_veiculos
-            # --- FIM DA CORREÇÃO ---
+         
 
         elif "ROMA" in nome_grupo_upper:
             roma_mg = ["Roma Contagem", "Roma Norte"]
@@ -355,16 +345,15 @@ class AutomacaoEmailOutlook:
             mg = [c for c in concessionarias_desenquadradas if c in roma_mg]
             rj = [c for c in concessionarias_desenquadradas if c in roma_rj]
 
-            # --- CORREÇÃO AQUI ---
+           
             if mg:
                 subgrupos["Roma MG"] = mg
             if rj:
                 subgrupos["Roma RJ"] = rj
-            # --- FIM DA CORREÇÃO ---
 
         return subgrupos
     
-    # --- MÉTODO ATUALIZADO (MOVIDO PARA DENTRO DA CLASSE) ---
+   
     def analisar_e_processar_erep(self, aba_dados_tabelas, linha_inicial_scan, limite_pontuacao):
         """
         Varre a Coluna B procurando por grupos "(E-REP)".
@@ -403,8 +392,8 @@ class AutomacaoEmailOutlook:
         max_linha = ws.max_row
         max_col_planilha = ws.max_column
         
-        COLUNA_GATILHO_GRUPO = 2  # Coluna B
-        COLUNA_NOME_CONCESSIONARIA = 8  # Coluna H
+        COLUNA_GATILHO_GRUPO = 2  
+        COLUNA_NOME_CONCESSIONARIA = 8  
         
         grupos_enviados = 0
         data_hoje_formatada = datetime.now().strftime("%d.%m")
@@ -420,7 +409,7 @@ class AutomacaoEmailOutlook:
                 
                 print(f"--- Processando Bloco: {nome_grupo} (Início Linha {linha_inicio_bloco}) ---")
 
-                # --- Encontrar o fim do bloco ---
+               
                 linha_fim_bloco = linha_inicio_dados
                 while linha_fim_bloco <= (max_linha + 3):
                     try:
@@ -438,7 +427,7 @@ class AutomacaoEmailOutlook:
                 linha_fim_bloco = min(linha_fim_bloco - 1, max_linha)
                 print(f"    Debug Bloco: Fim na linha {linha_fim_bloco}.")
                 
-                # --- Encontrar colunas de data ---
+               
                 col_recente, col_anterior = self._encontrar_colunas_datas(ws, linha_datas, max_col_planilha)
                 if col_recente is None:
                     print(f"  ⚠ AVISO: Não foi possível encontrar datas válidas para {nome_grupo}. Pulando.")
@@ -450,7 +439,7 @@ class AutomacaoEmailOutlook:
                 flag_alerta_anterior = False
                 concessionarias_desenquadradas = []
 
-                # --- Analisar cada linha do grupo ---
+              
                 for r in range(linha_inicio_dados, linha_fim_bloco + 1):
                     nome_sub = ws.cell(r, COLUNA_NOME_CONCESSIONARIA).value
                     score_recente = ws.cell(r, col_recente).value
@@ -460,27 +449,27 @@ class AutomacaoEmailOutlook:
 
                     nome_upper = str(nome_sub).upper()
 
-                    # Ignorar linhas de "nota geral"
+                   
                     if any(palavra in nome_upper for palavra in ["TOTAL", "GERAL", "MÉDIA", "MEDIA", "RESULTADO"]):
                         continue
 
-                    # Verificar pontuação abaixo do limite
+                 
                     if isinstance(score_recente, (int, float)) and score_recente < limite_pontuacao:
                         flag_alerta_recente = True
                         nome_sub_limpo = str(nome_sub).strip()
                         
                         concessionarias_desenquadradas.append(nome_sub_limpo)
 
-                    # Verifica data anterior (para detectar melhora)
+                  
                     if col_anterior:
                         score_ant = ws.cell(r, col_anterior).value
                         if isinstance(score_ant, (int, float)) and score_ant < limite_pontuacao:
                             flag_alerta_anterior = True
 
-                # --- Remove duplicados ---
+                
                 concessionarias_desenquadradas = list(dict.fromkeys(concessionarias_desenquadradas))
 
-                # --- TRATAMENTO ESPECIAL PARA REGENCE E ROMA ---
+            
                 if ("REGENCE" in nome_grupo.upper() or "ROMA" in nome_grupo.upper()) and flag_alerta_recente:
                     subgrupos = self._identificar_subgrupos_regence_roma(nome_grupo, concessionarias_desenquadradas)
                     
@@ -507,9 +496,9 @@ class AutomacaoEmailOutlook:
                         caminho_img
                     )
                     
-                    # Envia um email para cada subgrupo (usando o nome limpo)
+                    
                     for nome_subgrupo, lista_desenquadradas_sub in subgrupos.items():
-                        # 'nome_subgrupo' agora é "Roma MG", que vai bater com a lista
+                        
                         dest = destinatarios_df[destinatarios_df['Grupo'] == nome_subgrupo]
                         
                         if dest.empty:
@@ -535,16 +524,16 @@ class AutomacaoEmailOutlook:
                         )
                         grupos_enviados += 1
                 
-                # --- TRATAMENTO PARA PARABÉNS (REGENCE E ROMA) ---
+             
                 elif ("REGENCE" in nome_grupo.upper() or "ROMA" in nome_grupo.upper()) and not flag_alerta_recente and flag_alerta_anterior:
                     subgrupos_names = []
                     
-                    # --- CORREÇÃO AQUI: Nomes sem o prefixo "Grupo " ---
+                
                     if "REGENCE" in nome_grupo.upper():
                         subgrupos_names = ["Regence Veículos", "Regence Veículos Fortaleza"]
                     elif "ROMA" in nome_grupo.upper():
                         subgrupos_names = ["Roma MG", "Roma RJ"]
-                    # --- FIM DA CORREÇÃO ---
+                
                     
                     caminho_img = os.path.join(pasta_temp, f"{nome_grupo.replace(' ', '_').replace('/', '-')}.png")
                     col_fim = 1
@@ -590,7 +579,7 @@ class AutomacaoEmailOutlook:
                         )
                         grupos_enviados += 1
                 
-                # --- TRATAMENTO NORMAL PARA OUTROS GRUPO (Já estava correto) ---
+               
                 else:
                     dest = destinatarios_df[destinatarios_df['Grupo'] == nome_grupo]
                     if dest.empty:
@@ -661,28 +650,24 @@ class AutomacaoEmailOutlook:
         print(f"Total de emails gerados: {grupos_enviados}")
         print(f"{'='*60}\n")
 
-# -----------------------------------------------------------------
-# BLOCO DE EXECUÇÃO - CONFIGURAÇÃO FINAL
-# -----------------------------------------------------------------
+
 if __name__ == "__main__":
-    # Configurações
-    
-    # Arquivo com os emails (Para/Cc) e Concessionária
+  
     ARQUIVO_DESTINATARIOS = "Emails grupo.xlsm"
     ABA_DESTINATARIOS = "BaseEnvios"
     
-    # Arquivo que contém TUDO (pontuações E tabelas)
+  
     ARQUIVO_PRINCIPAL = "Acompanhamento dispersão.xlsx" 
     
-    # Aba onde TUDO será analisado
+  
     ABA_E_REP = "E-REP"
     
-    # Linha onde o script deve começar a procurar pelos grupos
+  
     LINHA_INICIAL_SCAN = 30
     
     LIMITE_PONTUACAO = 780
     
-    # --- Executa ---
+
     print("Iniciando automação (Modo E-REP / Lógica de Datas Dinâmicas)...")
     print(f"Caminho atual: {os.getcwd()}")
     
@@ -697,9 +682,10 @@ if __name__ == "__main__":
             ABA_DESTINATARIOS
         )
         
-        # Chama a função de processamento único
+      
         automacao.analisar_e_processar_erep(
             aba_dados_tabelas=ABA_E_REP,
             linha_inicial_scan=LINHA_INICIAL_SCAN,
             limite_pontuacao=LIMITE_PONTUACAO
+
         )
